@@ -136,7 +136,9 @@ for k=1:numel(text_handles)
     end
 end
 set(findall(fig,'Type','colorbar'),'FontName',st.font_latin);
-set(findall(fig,'Type','graphplot'),'FontName',st.font_latin);
+% GraphPlot 的节点与支路标签分别设置字体。
+set(findall(fig,'Type','graphplot'),'NodeFontName',st.font_latin,...
+    'EdgeFontName',st.font_latin);
 end
 
 function out = mixed_font(in,st)
