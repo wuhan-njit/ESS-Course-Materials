@@ -21,6 +21,12 @@ if ismember(model_type,{'LP','MILP','SOCP'})
         ops.intlinprog.AbsoluteGapTolerance=1e-8;
     end
     tic;sol=optimize(constraints,objective,ops);solve_seconds=toc;
+    % 旧版 YALMIP 可能仍向 linprog 传入已取消的 X0 参数。
+    if strcmp(model_type,'LP') && sol.problem~=0 && ...
+            contains(lower(sol.info),'linprog') && contains(upper(sol.info),'X0')
+        tic;sol=ess_live_linprog(constraints,objective,ops);
+        solve_seconds=solve_seconds+toc;
+    end
     sol.native_solver_file=solver_file;
     assert(sol.problem==0,'%s 求解失败：%s',solver_name,sol.info);
     return

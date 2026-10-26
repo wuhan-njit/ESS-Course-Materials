@@ -26,6 +26,8 @@
 
 LP/MILP/SOCP 默认使用 MATLAB 原生 `linprog/intlinprog/coneprog`。任务三为 MISOCP，使用 MOSEK 或 Gurobi；MOSEK 可来自独立安装或 CVX 随附目录（若使用 CVX 随附的 MOSEK，请仅通过 `addpath(genpath('.../cvx/mosek'))` 添加 `cvx/mosek` 子目录，切勿运行 `cvx_setup` 或添加 `cvx` 根目录），YALMIP 负责建模。`ess_live_solve.m` 记录实际求解器，使用内置函数时核对 MathWorks 路径。
 
+若旧版 YALMIP 调用 `linprog` 时出现“不接受 X0”或“does not accept X0”，`ess_live_solve.m` 会使用 `ess_live_linprog.m` 导出同一个线性规划，以不含 X0 的语法调用原生 `linprog`，并将解写回 YALMIP 变量。更新文件时应同时复制这两个函数。也可按 [YALMIP 官方问题记录](https://github.com/yalmip/YALMIP/issues/1381) 更新 YALMIP，并用 `which calllinprog -all` 检查当前加载的接口位置。
+
 ## 场景参数
 
 网络算例基准容量为 100 MVA、基准电压为 12.66 kV。
