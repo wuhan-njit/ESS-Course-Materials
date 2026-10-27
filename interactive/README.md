@@ -36,6 +36,8 @@ MISOCP 调用启用 YALMIP 的 `debug` 并逐个捕获异常，MOSEK 失败后�
 
 随后仅将 MOSEK 时间上限提高至 600 秒，其余求解容差保持不变，同一目标 C 在约 153.6 秒返回 `INTEGER_OPTIMAL`，相对最优性间隙约为 `8.11e-9`，购电费用为 28414.17 元，储能与线性约束检查通过。当前 `ess_live_solve.m` 已采用 MOSEK 600 秒上限；Gurobi 仍为 120 秒。教师更新时替换该函数，执行 `clear ess_live_solve` 后重新运行交互文件即可。
 
+`templates/Template_Week1_Dispatch.mlx` 已同步上述求解参数、Gurobi `TuneTimeLimit=0` 兼容修复、原始错误输出及异常后切换求解器的处理。模板保留内嵌求解代码，可独立运行；MOSEK 上限为 600 秒，Gurobi 为 120 秒，gap、可行性及整数容差与 Interactive03 一致。
+
 ## 场景参数
 
 网络算例基准容量为 100 MVA、基准电压为 12.66 kV。
