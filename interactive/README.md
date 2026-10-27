@@ -28,6 +28,14 @@ LP/MILP/SOCP 默认使用 MATLAB 原生 `linprog/intlinprog/coneprog`。任务�
 
 若旧版 YALMIP 调用 `linprog` 时出现“不接受 X0”或“does not accept X0”，`ess_live_solve.m` 会使用 `ess_live_linprog.m` 导出同一个线性规划，以不含 X0 的语法调用原生 `linprog`，并将解写回 YALMIP 变量。更新文件时应同时复制这两个函数。也可按 [YALMIP 官方问题记录](https://github.com/yalmip/YALMIP/issues/1381) 更新 YALMIP，并用 `which calllinprog -all` 检查当前加载的接口位置。
 
+若任务三出现 `Gurobi error 10008: Unable to set parameter TuneTimeLimit to value -1`，请更新本目录的 `ess_live_solve.m`，执行 `clear ess_live_solve` 后重新运行。该函数显式设置 `ops.gurobi.TuneTimeLimit=0`，兼容旧版 YALMIP 与新版 Gurobi。也可更新 YALMIP，参见 [YALMIP 官方讨论](https://github.com/yalmip/YALMIP/discussions/1506)。
+
+MISOCP 调用启用 YALMIP 的 `debug` 并逐个捕获异常，MOSEK 失败后仍会尝试 Gurobi；若全部失败，报错包含原始异常或求解器返回信息。MOSEK 的 `Unknown error` 需要结合这些信息定位。可先运行 `which mosekopt -all`、`which callmosek -all`、`which sdpsettings -all` 检查加载位置，再运行 `mosekdiag` 检查 MOSEK 安装与许可证，并保留完整输出。
+
+2026-10-27 复核：默认学号 242400000 的目标 C 在 MOSEK 11.2 上达到 120 秒上限时尚未找到整数可行解（返回码 100001，整数问题及解状态均为 UNKNOWN），YALMIP 将其汇总为 `Unknown error`。同一模型使用 Gurobi 13.0.2 约 3.4 秒求解成功，购电费用为 28414.17 元。课程此前保存的目标 C 结果也使用 Gurobi。目标 C 当前可通过上述 Gurobi 参数兼容性修复及自动切换运行；该次 MOSEK 终止不能解释为模型不可行。目标 C 的二阶锥松弛精确性与交流电压检查仍按原有教学特例处理。
+
+随后仅将 MOSEK 时间上限提高至 600 秒，其余求解容差保持不变，同一目标 C 在约 153.6 秒返回 `INTEGER_OPTIMAL`，相对最优性间隙约为 `8.11e-9`，购电费用为 28414.17 元，储能与线性约束检查通过。当前 `ess_live_solve.m` 已采用 MOSEK 600 秒上限；Gurobi 仍为 120 秒。教师更新时替换该函数，执行 `clear ess_live_solve` 后重新运行交互文件即可。
+
 ## 场景参数
 
 网络算例基准容量为 100 MVA、基准电压为 12.66 kV。

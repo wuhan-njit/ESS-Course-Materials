@@ -41,8 +41,10 @@ messages=cell(0,1);tic;
 for k=1:numel(solver_candidates)
     solver_name=solver_candidates{k};
     ops=sdpsettings('solver',solver_name,'verbose',0,'savesolveroutput',1);
+    % 由本函数捕获原始异常，既保留错误原因，也继续尝试下一个求解器。
+    ops.debug=1;
     if strcmp(solver_name,'mosek')
-        ops.mosek.MSK_DPAR_MIO_MAX_TIME=120;
+        ops.mosek.MSK_DPAR_MIO_MAX_TIME=600;
         ops.mosek.MSK_DPAR_MIO_TOL_REL_GAP=1e-6;
         ops.mosek.MSK_DPAR_MIO_TOL_ABS_GAP=1e-8;
         ops.mosek.MSK_DPAR_MIO_TOL_FEAS=1e-9;
@@ -51,6 +53,8 @@ for k=1:numel(solver_candidates)
         ops.mosek.MSK_DPAR_INTPNT_CO_TOL_DFEAS=1e-10;
         ops.mosek.MSK_DPAR_INTPNT_CO_TOL_REL_GAP=1e-10;
     else
+        % 旧版 YALMIP 默认值为 -1，新版 Gurobi 要求非负。
+        ops.gurobi.TuneTimeLimit=0;
         ops.gurobi.TimeLimit=120;
         ops.gurobi.MIPGap=1e-6;
         ops.gurobi.FeasibilityTol=1e-9;
@@ -58,9 +62,37 @@ for k=1:numel(solver_candidates)
         ops.gurobi.OptimalityTol=1e-8;
         ops.gurobi.BarQCPConvTol=1e-9;
     end
-    sol=optimize(constraints,objective,ops);
+    try
+        sol=optimize(constraints,objective,ops);
+    catch solver_error
+        messages{end+1}=sprintf('%s [%s]: %s',solver_name,...
+            solver_error.identifier,solver_error.message); %#ok<AGROW>
+        continue
+    end
     if sol.problem==0,solve_seconds=toc;return;end
-    messages{end+1}=[solver_name ': ' sol.info]; %#ok<AGROW>
+    detail=sol.info;
+    if isfield(sol,'solveroutput') && ~isempty(sol.solveroutput)
+        % MOSEK 的 rcode/rmsg/rcodestr 及终止状态保留在原始输出中。
+        detail=sprintf('%s\n原始求解器输出：\n%s',detail,evalc('disp(sol.solveroutput)'));
+        if strcmp(solver_name,'mosek') && isfield(sol.solveroutput,'res')
+            raw=sol.solveroutput.res;
+            detail=sprintf('%s\nMOSEK 返回信息：\n%s',detail,evalc('disp(raw)'));
+            if isfield(raw,'sol') && isfield(raw.sol,'int')
+                integer_solution=raw.sol.int;
+                if isfield(integer_solution,'prosta')
+                    detail=sprintf('%s\n整数问题状态：%s',detail,integer_solution.prosta);
+                end
+                if isfield(integer_solution,'solsta')
+                    detail=sprintf('%s\n整数解状态：%s',detail,integer_solution.solsta);
+                end
+            end
+            if isfield(raw,'rcode') && raw.rcode==100001
+                detail=sprintf('%s\nMOSEK 已达到本次设置的 %g 秒时间上限。',...
+                    detail,ops.mosek.MSK_DPAR_MIO_MAX_TIME);
+            end
+        end
+    end
+    messages{end+1}=[solver_name ': ' detail]; %#ok<AGROW>
 end
 error('MISOCP 求解失败：%s',strjoin(messages,'; '));
 end
